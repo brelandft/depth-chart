@@ -1,0 +1,64 @@
+========================================================
+  DEPTH CHART — REFRESH THE ROSTER DATA
+  Plain-English instructions. ~5 minutes, mostly waiting.
+========================================================
+
+WHAT THIS DOES
+  Downloads the newest, complete NFL rosters and rebuilds the
+  game's data file (data.js) so no correct answer gets rejected.
+
+WHAT YOU NEED (one-time)
+  • Python 3 installed.  Check by opening Terminal and typing:
+        python3 --version
+    If you see a version number, you're set. If not, install from
+    https://www.python.org/downloads/  (click the big yellow button).
+
+    NOTE: if the script later fails on "installing polars", your Python
+    may be too new for the prebuilt packages. The script will tell you,
+    and the fix is simply installing Python 3.12 and running again.
+
+--------------------------------------------------------
+TO RUN IT
+--------------------------------------------------------
+  1. Open the Terminal app.
+       Mac:  press Cmd+Space, type "Terminal", hit Enter.
+       Windows: install "Git Bash" (https://git-scm.com/downloads),
+                then open it.
+
+  2. Go into the scripts folder. Type "cd " (with a space), then
+     DRAG the "scripts" folder from Finder/Explorer into the
+     Terminal window, then hit Enter. It will look like:
+        cd /Users/you/Downloads/depth-chart/scripts
+
+  3. Paste this one line and hit Enter:
+        bash refresh_data.sh
+
+  4. Wait. The first run downloads data and takes a couple minutes.
+     When it finishes you'll see a list of green ✅ check marks and
+     "Done." That means it worked.
+
+--------------------------------------------------------
+TO SEE THE GAME WITH THE NEW DATA
+--------------------------------------------------------
+  In Terminal, from the main depth-chart folder, type:
+        npx serve .
+  Open the link it prints (like http://localhost:3000), then press
+  Cmd+Shift+R (Mac) or Ctrl+Shift+R (Windows) to hard-refresh.
+
+--------------------------------------------------------
+TO RE-CHECK ANYTIME (without rebuilding)
+--------------------------------------------------------
+        python3 verify_data.py
+
+--------------------------------------------------------
+IF SOMETHING GOES WRONG
+--------------------------------------------------------
+  Copy everything the Terminal printed and send it to me. The most
+  common issue is a network/firewall block on the download — the
+  error text tells us exactly what to do.
+
+  A player rated wrong? Open  scripts/overlay_tiers.csv  in any
+  text editor and add a line, e.g.:
+        Saquon Barkley,,RB,1
+  (blank team/group = applies everywhere). Then run refresh_data.sh
+  again.

@@ -1,0 +1,89 @@
+name,team,group,tier
+# Stars whose fame outruns their career length (longevity tiering would under-rate).
+# team/group blank = applies to the player on every team. Add your own freely.
+# Recent/short-career stars:
+Patrick Mahomes,,QB,1
+Joe Burrow,,QB,1
+Justin Herbert,,QB,1
+Jalen Hurts,,QB,1
+Lamar Jackson,,QB,1
+Josh Allen,,QB,1
+Trevor Lawrence,,QB,1
+C.J. Stroud,,QB,1
+Jayden Daniels,,QB,1
+Caleb Williams,,QB,1
+Brock Purdy,,QB,1
+Tua Tagovailoa,,QB,2
+Justin Jefferson,,WR,1
+Ja'Marr Chase,,WR,1
+CeeDee Lamb,,WR,1
+Amon-Ra St. Brown,,WR,1
+Puka Nacua,,WR,1
+Garrett Wilson,,WR,1
+Malik Nabers,,WR,1
+Nico Collins,,WR,2
+Brian Thomas,,WR,2
+Marvin Harrison Jr.,,WR,2
+Christian McCaffrey,,RB,1
+Saquon Barkley,,RB,1
+Jonathan Taylor,,RB,1
+Bijan Robinson,,RB,1
+Jahmyr Gibbs,,RB,1
+Breece Hall,,RB,2
+Ashton Jeanty,,RB,2
+Sam LaPorta,,TE,1
+Brock Bowers,,TE,1
+Trey McBride,,TE,1
+Micah Parsons,,DL,1
+Nick Bosa,,DL,1
+Myles Garrett,,DL,1
+T.J. Watt,,DL,1
+Aidan Hutchinson,,DL,1
+Will Anderson,,DL,2
+Jalen Carter,,DL,1
+Sauce Gardner,,CB,1
+Patrick Surtain II,,CB,1
+Devon Witherspoon,,CB,2
+Derek Stingley Jr.,,CB,2
+Fred Warner,,LB,1
+Roquan Smith,,LB,1
+Kyle Hamilton,,S,1
+Brian Branch,,S,2
+Penei Sewell,,OL,1
+# Short-career / older legends longevity may miss:
+Luke Kuechly,,LB,1
+Andrew Luck,,QB,1
+Terrell Davis,,RB,1
+Bo Jackson,,RB,1
+Gale Sayers,,RB,1
+Barry Sanders,,RB,1
+Patrick Willis,,LB,1
+Sean Taylor,,S,1
+Bobby Wagner,,LB,1
+# Marquee veterans (durable stars; longevity usually catches them, here for safety):
+Tom Brady,,QB,1
+Aaron Rodgers,,QB,1
+Russell Wilson,,QB,1
+Matthew Stafford,,QB,1
+Rob Gronkowski,,TE,1
+Travis Kelce,,TE,1
+George Kittle,,TE,1
+Mark Andrews,,TE,2
+Tyreek Hill,,WR,1
+Davante Adams,,WR,1
+Stefon Diggs,,WR,1
+DeAndre Hopkins,,WR,1
+Mike Evans,,WR,1
+Cooper Kupp,,WR,1
+A.J. Brown,,WR,1
+Derrick Henry,,RB,1
+Alvin Kamara,,RB,1
+Aaron Donald,,DL,1
+Chris Jones,,DL,1
+Von Miller,,DL,1
+Khalil Mack,,DL,1
+Joey Bosa,,DL,1
+Maxx Crosby,,DL,1
+Jalen Ramsey,,CB,1
+Minkah Fitzpatrick,,S,1
+Derwin James,,S,1

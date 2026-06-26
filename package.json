@@ -1,0 +1,17 @@
+{
+  "name": "depth-chart",
+  "version": "1.0.0",
+  "description": "A daily football roster-recall game.",
+  "private": true,
+  "scripts": {
+    "build": "bash build.sh",
+    "preview": "npx serve ."
+  },
+  "devDependencies": {
+    "esbuild": "^0.21.0"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}

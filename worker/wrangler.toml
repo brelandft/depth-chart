@@ -1,0 +1,10 @@
+name = "depth-chart-api"
+main = "worker.js"
+compatibility_date = "2025-01-01"
+
+# Create the KV namespace first, then paste its id below:
+#   npx wrangler kv namespace create DEPTH_KV
+# Wrangler prints an id — put it here.
+kv_namespaces = [
+  { binding = "DEPTH_KV", id = "PASTE_YOUR_KV_NAMESPACE_ID_HERE" }
+]
