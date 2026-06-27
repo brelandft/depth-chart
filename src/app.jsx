@@ -666,7 +666,7 @@ const FORMATS = {
     label: "Daily 7", rerolls: 3,
     slots: [
       { g: "WR", x: 10, y: 33, band: 0 },
-      { g: "TE", x: 66, y: 33, band: 1 },
+      { g: "TE", x: 76, y: 33, band: 1 },
       { g: "WR", x: 90, y: 31, band: 0 },
       { g: "QB", x: 50, y: 50, band: 0 },
       { g: "WR", x: 28, y: 43, band: 1 },
@@ -692,11 +692,11 @@ const FORMATS = {
   },
 };
 const BAND_MARK = ["", "▲", "▲▲"];
-/* decorative (non-guessable) O-line shown on Daily 7 so the formation reads like
-   a real offense and stays visually consistent with Daily 11 */
+/* decorative (non-guessable) O-line shown on Daily 7 as faint Xs so the
+   formation reads like a real offense without looking like guessable spots */
 const GHOST_OL = [
-  { g: "LT", x: 34, y: 33 }, { g: "LG", x: 42, y: 33 }, { g: "C", x: 50, y: 33 },
-  { g: "RG", x: 58, y: 33 }, { g: "RT", x: 64, y: 33 },
+  { x: 37, y: 33 }, { x: 43.5, y: 33 }, { x: 50, y: 33 },
+  { x: 56.5, y: 33 }, { x: 63, y: 33 },
 ];
 const BLUE_BLOODS = new Set(["BAMA","OSU","MICH","ND","USC","TEX","OU","UGA","LSU","PSU","FSU","MIAU","UT","NEB","CLEM","FLA","AUB","WISC","ORE"]);
 
@@ -1035,12 +1035,11 @@ function DailyMode({ league, L, toast, fmtKey }) {
             );
           })}
           {isSeven && GHOST_OL.map((o, i) => {
-            const gx = (o.x / 100) * FIELD_W, gy = (o.y / 100) * FIELD_H, gr = R * 0.6;
+            const gx = (o.x / 100) * FIELD_W, gy = (o.y / 100) * FIELD_H, s = 9;
             return (
-              <g key={"ol" + i} style={{ pointerEvents: "none" }}>
-                <circle cx={gx} cy={gy} r={gr} fill="rgba(16,19,24,.5)" stroke="rgba(237,234,226,.16)" strokeWidth="2" />
-                <text x={gx} y={gy + 4} textAnchor="middle" fontSize="13" fontWeight="700"
-                  fontFamily="'Barlow Condensed',sans-serif" fill="rgba(237,234,226,.38)">{o.g}</text>
+              <g key={"ol" + i} style={{ pointerEvents: "none" }} stroke="rgba(237,234,226,.22)" strokeWidth="3" strokeLinecap="round">
+                <line x1={gx - s} y1={gy - s} x2={gx + s} y2={gy + s} />
+                <line x1={gx - s} y1={gy + s} x2={gx + s} y2={gy - s} />
               </g>
             );
           })}
