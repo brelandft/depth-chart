@@ -249,7 +249,7 @@ const US_PATH = US_OUTLINE.map(([lo, la], i) => {
 
 /* ---------- theme ---------- */
 const THEME_CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Graduate&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Graduate&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap');
 :root{
   --ink:#101318; --panel:#191E26; --panel2:#212834; --inset:#0C0F14;
   --line:rgba(232,229,221,.13); --line2:rgba(232,229,221,.22);
@@ -294,6 +294,10 @@ const THEME_CSS = `
 .wrq .statnum{font-family:'Graduate','Arial Black',sans-serif;font-size:22px;color:var(--chalk);line-height:1}
 .wrq .statlab{font-family:'Barlow Condensed',sans-serif;font-size:11px;color:var(--dim);
   letter-spacing:.14em;text-transform:uppercase;margin-top:4px}
+@keyframes wrqword{0%{opacity:0;transform:translateY(8px)}20%{opacity:1;transform:translateY(0)}70%{opacity:1;transform:translateY(-7px)}100%{opacity:0;transform:translateY(-20px)}}
+@keyframes wrqmeh{0%{opacity:0}25%{opacity:.85;transform:translate(0,0)}55%{transform:translate(-2px,1px) rotate(-3deg)}72%{transform:translate(2px,1px) rotate(3deg)}100%{opacity:0;transform:translate(0,3px)}}
+@keyframes wrqcfetti{0%{opacity:0;transform:translate(0,0) rotate(0)}12%{opacity:1}100%{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(var(--rot))}}
+.wrq .cfetti{transform-box:fill-box;transform-origin:center}
 @media (prefers-reduced-motion: reduce){.wrq *{animation:none!important;transition:none!important}}
 `;
 
@@ -688,6 +692,12 @@ const FORMATS = {
   },
 };
 const BAND_MARK = ["", "▲", "▲▲"];
+/* decorative (non-guessable) O-line shown on Daily 7 so the formation reads like
+   a real offense and stays visually consistent with Daily 11 */
+const GHOST_OL = [
+  { g: "LT", x: 34, y: 33 }, { g: "LG", x: 42, y: 33 }, { g: "C", x: 50, y: 33 },
+  { g: "RG", x: 58, y: 33 }, { g: "RT", x: 64, y: 33 },
+];
 const BLUE_BLOODS = new Set(["BAMA","OSU","MICH","ND","USC","TEX","OU","UGA","LSU","PSU","FSU","MIAU","UT","NEB","CLEM","FLA","AUB","WISC","ORE"]);
 
 function pairBand(t, g, league) {
@@ -742,10 +752,21 @@ function estPickPct(player, slotCounts) {
 const ptsFromPct = (pct) => Math.max(1, Math.round(100 - pct));
 /* one source of truth: a point value -> performance bin (0 miss … 4 best) */
 const ptsBin = (p) => (p <= 0 ? 0 : p >= 94 ? 4 : p >= 85 ? 3 : p >= 70 ? 2 : 1);
-const BIN_EMOJI = ["⬛", "🟦", "🟩", "🟨", "🔥"];
-const BIN_COLOR = ["#2A2E36", "#4F86C6", "#5FA86E", "#E8C24A", "#E8772E"];
+const BIN_EMOJI = ["🟥", "🟧", "🟨", "🟩", "🔥"];
+const BIN_COLOR = ["#C2433B", "#E0792F", "#E8C24A", "#4FA85E", "#2BCB72"];
 const BIN_LABEL = ["missed", "chalk", "solid", "deep", "deep cut"];
 const ptsEmoji = (p) => BIN_EMOJI[ptsBin(p)];
+/* escalating lock reaction: word + confetti count scale with the points tier */
+const REACT_WORD = ["", "meh", "not bad", "nice!", "filthy!"];
+function reactBits(bin) {
+  const n = [0, 0, 2, 4, 7][bin] || 0;
+  const cols = ["#F2B63B", "#FFFFFF", BIN_COLOR[bin] || "#F2B63B"];
+  return Array.from({ length: n }).map((_, k) => {
+    const ang = -Math.PI / 2 + (k - (n - 1) / 2) * (Math.PI / (n + 1));
+    const dist = 36 + (k % 3) * 11;
+    return { dx: (Math.cos(ang) * dist).toFixed(1), dy: (Math.sin(ang) * dist).toFixed(1), col: cols[k % 3], delay: (k % 4) * 0.04, rot: 150 + (k * 53) % 200 };
+  });
+}
 
 /* football rank grade from avg points/slot (rewards completion AND rarity) */
 const RANKS = [
@@ -779,6 +800,7 @@ function DailyMode({ league, L, toast, fmtKey }) {
   const [streak, setStreak] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [react, setReact] = useState(null);
   const finishedRef = useRef(false);
   const inputRef = useRef(null);
 
@@ -789,7 +811,7 @@ function DailyMode({ league, L, toast, fmtKey }) {
 
   useEffect(() => {
     setSlots(baseSlots); setAnswers(baseSlots.map(() => null));
-    setRerolls(fmt.rerolls); setSel(0); setPctile(null); setLoaded(false);
+    setRerolls(fmt.rerolls); setSel(0); setPctile(null); setLoaded(false); setReact(null);
     finishedRef.current = false;
     (async () => {
       const [saved, st] = await Promise.all([sGet(stateKey), sGet(streakKey)]);
@@ -915,6 +937,7 @@ function DailyMode({ league, L, toast, fmtKey }) {
       const pts = ptsFromPct(pct);
       next[sel] = { name: hit.name, tier: hit.tier, pts, pct, team: slot.team.id };
       setAnswers(next); persist(next, rerolls);
+      setReact({ idx: sel, bin: ptsBin(pts), key: Date.now() });
       recordSharedPick(slot.team.id, slot.g, hit.key);
       toast(`${hit.name} · ~${pct.toFixed(0)}% pick rate · +${pts} pts`);
     } else {
@@ -1011,6 +1034,16 @@ function DailyMode({ league, L, toast, fmtKey }) {
               </g>
             );
           })}
+          {isSeven && GHOST_OL.map((o, i) => {
+            const gx = (o.x / 100) * FIELD_W, gy = (o.y / 100) * FIELD_H, gr = R * 0.6;
+            return (
+              <g key={"ol" + i} style={{ pointerEvents: "none" }}>
+                <circle cx={gx} cy={gy} r={gr} fill="rgba(16,19,24,.5)" stroke="rgba(237,234,226,.16)" strokeWidth="2" />
+                <text x={gx} y={gy + 4} textAnchor="middle" fontSize="13" fontWeight="700"
+                  fontFamily="'Barlow Condensed',sans-serif" fill="rgba(237,234,226,.38)">{o.g}</text>
+              </g>
+            );
+          })}
           {slots.map((s, i) => {
             const x = (s.x / 100) * FIELD_W, y = (s.y / 100) * FIELD_H;
             const a = answers[i];
@@ -1040,6 +1073,23 @@ function DailyMode({ league, L, toast, fmtKey }) {
               </g>
             );
           })}
+          {react && slots[react.idx] && (
+            <g key={react.key} style={{ pointerEvents: "none" }}>
+              {reactBits(react.bin).map((b, k) => {
+                const sx = (slots[react.idx].x / 100) * FIELD_W, sy = (slots[react.idx].y / 100) * FIELD_H;
+                return (
+                  <rect key={k} className="cfetti" x={sx - 3} y={sy - 4} width="6" height="8" rx="1" fill={b.col}
+                    style={{ "--dx": b.dx + "px", "--dy": b.dy + "px", "--rot": b.rot + "deg", opacity: 0, animation: `wrqcfetti .85s ease-out ${b.delay}s forwards` }} />
+                );
+              })}
+              <text x={(slots[react.idx].x / 100) * FIELD_W} y={(slots[react.idx].y / 100) * FIELD_H - R - 10}
+                textAnchor="middle" fontSize={react.bin >= 4 ? 19 : react.bin >= 3 ? 16 : 14} fontWeight="800"
+                fontFamily="'Barlow Condensed',sans-serif" fill={BIN_COLOR[react.bin]}
+                style={{ opacity: 0, animation: `${react.bin === 1 ? "wrqmeh" : "wrqword"} 1.1s ease-out forwards` }}>
+                {REACT_WORD[react.bin]}
+              </text>
+            </g>
+          )}
         </svg>
       </div>
 
@@ -1106,7 +1156,7 @@ function DailyMode({ league, L, toast, fmtKey }) {
                   style={{
                     width: 38, height: 38, borderRadius: 7, background: BIN_COLOR[bin],
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    color: bin === 0 ? "var(--miss)" : "#1a1206", fontWeight: 800, fontSize: 14,
+                    color: bin === 0 ? "#fff" : "#1a1206", fontWeight: 800, fontSize: 14,
                     fontFamily: "'Barlow Condensed',sans-serif",
                     border: bin === 0 ? "1px solid rgba(224,88,78,.5)" : "none",
                   }}>
@@ -1176,10 +1226,14 @@ export default function App() {
       <div className="shell">
         <header style={{ padding: "24px 0 6px", display: "flex", alignItems: "flex-end", flexWrap: "wrap", gap: 14 }}>
           <div>
-            <div className="disp" style={{ fontSize: "clamp(28px,6vw,42px)", lineHeight: 1 }}>
-              {BRAND.split(" ").map((w, i, a) => (
-                <span key={i} style={i === a.length - 1 ? { color: "var(--gold)" } : undefined}>{w}{i < a.length - 1 ? " " : ""}</span>
-              ))}
+            <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
+              <span aria-hidden="true" style={{ display: "flex", flexDirection: "column", gap: 3, flexShrink: 0 }}>
+                <span style={{ display: "block", width: 18, height: 18, borderRight: "3.5px solid var(--gold)", borderBottom: "3.5px solid var(--gold)", transform: "rotate(45deg)" }} />
+                <span style={{ display: "block", width: 18, height: 18, borderRight: "3.5px solid var(--gold)", borderBottom: "3.5px solid var(--gold)", transform: "rotate(45deg)", opacity: .5, marginTop: -9 }} />
+              </span>
+              <span style={{ fontFamily: "'Anton',system-ui,sans-serif", fontSize: "clamp(30px,7vw,46px)", lineHeight: .9, whiteSpace: "nowrap", textTransform: "uppercase", letterSpacing: ".01em", color: "var(--chalk)" }}>
+                {BRAND}
+              </span>
             </div>
             <div className="cond" style={{ color: "var(--dim)", letterSpacing: ".14em", textTransform: "uppercase", fontSize: 13, marginTop: 6 }}>
               {data
