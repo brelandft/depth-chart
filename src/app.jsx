@@ -1101,9 +1101,11 @@ function DailyMode({ league, L, toast, fmtKey }) {
     if (inputRef.current) { inputRef.current.value = ""; inputRef.current.focus(); }
   };
 
-  const submit = () => {
+  const submittingRef = useRef(false);
+
+  const submit = async () => {
     const el = inputRef.current;
-    if (!el || done || answers[sel] !== null) return;
+    if (!el || done || answers[sel] !== null || submittingRef.current) return;
     const g = norm(el.value);
     if (!g) return;
     const slot = slots[sel];
@@ -1117,44 +1119,88 @@ function DailyMode({ league, L, toast, fmtKey }) {
       if (distinct.length === 1) hit = suffix[0];
       else if (distinct.length > 1) {
         setShake(true); setTimeout(() => setShake(false), 380);
-        toast(`${distinct.length} ${slot.team.name} ${slot.g}s share that name â full name to lock it.`);
+        toast(`${distinct.length} ${slot.team.name} ${slot.g}s share that name — full name to lock it.`);
         el.select(); return;
       }
     }
     const next = [...answers];
     if (hit) {
-      const counts = pickCache[pickKey(slot.team.id, slot.g)];
-      const pct = estPickPct(hit, counts);
-      const pts = ptsFromPct(pct);
-      next[sel] = { name: hit.name, tier: hit.tier, pts, pct, team: slot.team.id };
-      setAnswers(next); persist(next, rerolls);
-      setReact({ idx: sel, bin: ptsBin(pts), key: Date.now() });
-      recordSharedPick(slot.team.id, slot.g, hit.key);
-      toast(`${hit.name} Â· ~${pct.toFixed(0)}% pick rate Â· +${pts} pts`);
+      // Local match above is provisional — it drives the ambiguity/miss UX above,
+      // which stays instant. But points + the shared pick-rate counter only come
+      // from the Worker's /pick response: that's the one source of truth for
+      // "this was actually correct," so a client can't just assert a score.
+      submittingRef.current = true;
+      const finalizeHit = (name, tier, pts, pct) => {
+        next[sel] = { name, tier, pts, pct, team: slot.team.id };
+        setAnswers(next); persist(next, rerolls);
+        setReact({ idx: sel, bin: ptsBin(pts), key: Date.now() });
+        toast(`${name} · ~${pct.toFixed(0)}% pick rate · +${pts} pts`);
+      };
+      const localFallback = () => {
+        const counts = pickCache[pickKey(slot.team.id, slot.g)];
+        const pct = estPickPct(hit, counts);
+        const pts = ptsFromPct(pct);
+        finalizeHit(hit.name, hit.tier, pts, pct);
+        recordSharedPick(slot.team.id, slot.g, hit.key);
+      };
+      if (BACKEND_URL) {
+        try {
+          const r = await fetch(BACKEND_URL + "/pick", {
+            method: "POST", mode: "cors", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ league, team: slot.team.id, position: slot.g, guess: hit.name }),
+          });
+          const data = await r.json();
+          if (data.status === "hit") {
+            finalizeHit(data.name, data.tier, data.pts, data.pct);
+            setPickCache((c) => {
+              const k = pickKey(slot.team.id, slot.g);
+              const cur = c[k] || {};
+              return { ...c, [k]: { ...cur, [data.key]: (cur[data.key] || 0) + 1, __total: (cur.__total || 0) + 1 } };
+            });
+          } else {
+            // Worker disagreed with the local match (stale client data vs. server —
+            // shouldn't normally happen since both read the same roster source).
+            // Don't invent a score for a guess the server won't confirm.
+            setShake(true); setTimeout(() => setShake(false), 380);
+            toast("Couldn't confirm that pick with the server — try again.");
+            submittingRef.current = false;
+            el.select();
+            return;
+          }
+        } catch {
+          // Network hiccup, not a disagreement — same "never break play" fallback
+          // philosophy as sGet/sSet already use elsewhere in this file.
+          localFallback();
+        }
+      } else {
+        localFallback();
+      }
+      submittingRef.current = false;
     } else {
       const res = resolveGuess(L, g);
       if (res.ambiguous) {
         setShake(true); setTimeout(() => setShake(false), 380);
-        toast("That last name matches several players â full name, no penalty.");
+        toast("That last name matches several players — full name, no penalty.");
         el.select(); return;
       }
       if (!res.entries.length) {
         setShake(true); setTimeout(() => setShake(false), 380);
-        toast("Not in the database at all â no harm, try another name.");
+        toast("Not in the database at all — no harm, try another name.");
         el.focus(); return;
       }
       next[sel] = { miss: true, pts: 0, guess: el.value.trim() };
       setAnswers(next); persist(next, rerolls);
       setShake(true); setTimeout(() => setShake(false), 380);
       toast(rerolls > 0
-        ? `Not a ${slot.team.name} ${slot.g} â spot's burned. Tip: ð² re-roll teams you don't know.`
-        : `Not a ${slot.team.name} ${slot.g} â spot's burned.`);
+        ? `Not a ${slot.team.name} ${slot.g} — spot's burned. Tip: 🎲 re-roll teams you don't know.`
+        : `Not a ${slot.team.name} ${slot.g} — spot's burned.`);
     }
     el.value = "";
     const open = next.findIndex((a) => a === null);
     if (open >= 0) setSel(open);
     el.focus();
   };
+
 
   const shareText = () => {
     const row = answers.map((s) => ptsEmoji(s?.pts || 0)).join("");
@@ -1330,7 +1376,7 @@ function DailyMode({ league, L, toast, fmtKey }) {
           {/* grade headline */}
           <div style={{ textAlign: "center", marginBottom: 16 }}>
             <div className="cond" style={{ fontSize: 12, letterSpacing: ".22em", color: "var(--dim)", textTransform: "uppercase" }}>{isReplay ? "🔁 Replay Score" : "Today's grade"}</div>
-            <div className="disp" style={{ fontSize: "clamp(30px,7vw,46px)", color: {isReplay ? "var(--miss)" : "var(--gold)"}, lineHeight: 1.05, margin: "4px 0 6px" }}>
+            <div className="disp" style={{ fontSize: "clamp(30px,7vw,46px)", color: isReplay ? "var(--miss)" : "var(--gold)", lineHeight: 1.05, margin: "4px 0 6px" }}>
               {gradeFor(total, N).icon} {gradeFor(total, N).title}
             </div>
             <div className="cond" style={{ fontSize: 18, color: "var(--chalk)" }}>
