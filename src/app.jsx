@@ -8,7 +8,7 @@ const BACKEND_URL = CFG.backendUrl || "";  // e.g. "https://depth-chart-api.you.
 
 
 /* ============================================================
-   WR DEEP CUTS v3 — full modern-era rosters, every position
+   WR DEEP CUTS v3 â full modern-era rosters, every position
    23k NFL stints (1970-2025) + 10k college entries, 9 position
    groups, endless map mode + 22-man daily formation.
    Data: nflverse-ecosystem open sources, merged + tiered.
@@ -17,7 +17,7 @@ const BACKEND_URL = CFG.backendUrl || "";  // e.g. "https://depth-chart-api.you.
 /* ---------- utilities ---------- */
 const norm = (s) =>
   s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    .replace(/['’.\-]/g, "").replace(/\b(jr|sr|ii|iii|iv|v)\b/g, "")
+    .replace(/['â.\-]/g, "").replace(/\b(jr|sr|ii|iii|iv|v)\b/g, "")
     .replace(/[^a-z ]/g, "").replace(/\s+/g, " ").trim();
 
 function lev1(a, b) {
@@ -320,7 +320,186 @@ const Toast = ({ msg }) =>
   );
 
 /* ============================================================
-   ENDLESS MODE — full-roster boards, position categories
+   HOW TO PLAY MODAL
+   ============================================================ */
+function HowToPlayModal({ fmtKey, onClose }) {
+  const isSeven = fmtKey === "seven";
+  const positions = isSeven ? ["WR","TE","WR","QB","WR","RB","RB"] : ["WR","OL","OL","OL","OL","OL","TE","WR","QB","WR","RB"];
+  const exampleSlots = isSeven
+    ? [
+        { g:"WR", team:"KC",  x:10, y:33, pts:52 },
+        { g:"TE", team:"SF",  x:76, y:33, pts:34 },
+        { g:"WR", team:"DAL", x:90, y:31, pts:71 },
+        { g:"QB", team:"BUF", x:50, y:50, pts:22 },
+        { g:"WR", team:"PHI", x:28, y:43, pts:45 },
+        { g:"RB", team:"BAL", x:40, y:67, pts:60 },
+        { g:"RB", team:"MIA", x:60, y:67, pts:80 },
+      ]
+    : [
+        { g:"WR", team:"KC",  x:7,  y:30, pts:52 },
+        { g:"OL", team:"NE",  x:29, y:33, pts:34 },
+        { g:"OL", team:"GB",  x:39, y:33, pts:55 },
+        { g:"OL", team:"PIT", x:50, y:33, pts:40 },
+        { g:"OL", team:"DEN", x:61, y:33, pts:65 },
+        { g:"OL", team:"MIN", x:71, y:33, pts:30 },
+        { g:"TE", team:"SF",  x:84, y:30, pts:34 },
+        { g:"WR", team:"DAL", x:94, y:27, pts:71 },
+        { g:"QB", team:"BUF", x:50, y:52, pts:22 },
+        { g:"WR", team:"PHI", x:16, y:46, pts:45 },
+        { g:"RB", team:"BAL", x:50, y:70, pts:60 },
+      ];
+  const FW = 480, FH = isSeven ? 320 : 380;
+  const R = isSeven ? 26 : 20;
+  const exBinColor = ["#C2433B","#E0792F","#E8C24A","#4FA85E","#2BCB72"];
+  const getBin = (pts) => pts === 0 ? 0 : pts < 25 ? 1 : pts < 45 ? 2 : pts < 65 ? 3 : 4;
+  const GHOST_OL_EX = isSeven ? [
+    { x: 37, y: 33 }, { x: 43.5, y: 33 }, { x: 50, y: 33 }, { x: 56.5, y: 33 }, { x: 63, y: 33 },
+  ] : [];
+  return (
+    <div
+      style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.72)", zIndex:1000,
+               display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}
+      onClick={e => e.target === e.currentTarget && onClose()}
+    >
+      <div className="card" style={{ maxWidth:560, width:"100%", padding:"24px 20px", position:"relative",
+                                      maxHeight:"90vh", overflowY:"auto", border:"1px solid rgba(242,182,59,.35)" }}>
+        <button
+          onClick={onClose}
+          style={{ position:"absolute", top:12, right:14, background:"none", border:"none",
+                   color:"var(--dim)", fontSize:22, cursor:"pointer", lineHeight:1, padding:4 }}
+          aria-label="Close instructions"
+        >×</button>
+
+        <div className="disp" style={{ fontSize:"clamp(20px,5vw,28px)", color:"var(--gold)", marginBottom:6, paddingRight:32 }}>
+          How to Play — {isSeven ? "Daily 7" : "Daily 11"}
+        </div>
+        <div className="cond" style={{ color:"var(--dim)", fontSize:14, letterSpacing:".05em", marginBottom:16 }}>
+          {isSeven
+            ? "Fill 7 skill-position spots (QB · RB · WR · TE) — one player per team."
+            : "Fill a full 11-man offense including the O-line — one player per team."}
+        </div>
+
+        {/* RULES */}
+        <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:20 }}>
+          <div className="card" style={{ padding:"10px 14px", background:"var(--inset)", display:"flex", gap:12, alignItems:"flex-start" }}>
+            <span style={{ fontSize:22, flexShrink:0 }}>🎯</span>
+            <div>
+              <div className="cond" style={{ fontWeight:700, color:"var(--chalk)", fontSize:15 }}>One guess per spot</div>
+              <div className="cond" style={{ color:"var(--dim)", fontSize:13, marginTop:2 }}>
+                Type any player who played that position for that team. Get it wrong and the spot's burned — no second chances.
+              </div>
+            </div>
+          </div>
+          <div className="card" style={{ padding:"10px 14px", background:"var(--inset)", display:"flex", gap:12, alignItems:"flex-start" }}>
+            <span style={{ fontSize:22, flexShrink:0 }}>💰</span>
+            <div>
+              <div className="cond" style={{ fontWeight:700, color:"var(--chalk)", fontSize:15 }}>Obscurity = more points</div>
+              <div className="cond" style={{ color:"var(--dim)", fontSize:13, marginTop:2 }}>
+                Score = <strong style={{ color:"var(--gold)" }}>100 − pick %</strong>. Name Patrick Mahomes (everyone picks him) and score ~5. Dig up a deep cut nobody remembers and score up to 95+.
+              </div>
+            </div>
+          </div>
+          <div className="card" style={{ padding:"10px 14px", background:"var(--inset)", display:"flex", gap:12, alignItems:"flex-start" }}>
+            <span style={{ fontSize:22, flexShrink:0 }}>🎲</span>
+            <div>
+              <div className="cond" style={{ fontWeight:700, color:"var(--chalk)", fontSize:15 }}>Re-rolls: swap a team you don't know</div>
+              <div className="cond" style={{ color:"var(--dim)", fontSize:13, marginTop:2 }}>
+                You get <strong style={{ color:"var(--gold)" }}>{isSeven ? "3" : "2"} re-rolls</strong>. Select an unanswered spot and hit Re-roll to swap that team for a fresh one. Re-rolls are shared across the board — use them wisely!
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* EXAMPLE FORMATION */}
+        <div className="cond" style={{ fontSize:12, letterSpacing:".18em", color:"var(--dim)", textTransform:"uppercase", marginBottom:8 }}>
+          Example formation
+        </div>
+        <div className="card" style={{ padding:8, background:"var(--turf)", borderColor:"rgba(237,234,226,.2)", marginBottom:16 }}>
+          <svg viewBox={`0 0 ${FW} ${FH}`} style={{ width:"100%", height:"auto", display:"block" }} aria-hidden="true">
+            {Array.from({ length: isSeven ? 5 : 6 }).map((_, i) => {
+              const y = (FH / (isSeven ? 6 : 7)) * (i + 1);
+              return (
+                <g key={i}>
+                  <line x1="0" x2={FW} y1={y} y2={y} stroke={i===1 ? "rgba(242,182,59,.5)" : "rgba(237,234,226,.22)"} strokeWidth={i===1 ? 3 : 1.5} />
+                </g>
+              );
+            })}
+            {GHOST_OL_EX.map((o, i) => {
+              const gx=(o.x/100)*FW, gy=(o.y/100)*FH, s=7;
+              return (
+                <g key={"ol"+i} stroke="rgba(237,234,226,.22)" strokeWidth="2.5" strokeLinecap="round">
+                  <line x1={gx-s} y1={gy-s} x2={gx+s} y2={gy+s} />
+                  <line x1={gx-s} y1={gy+s} x2={gx+s} y2={gy-s} />
+                </g>
+              );
+            })}
+            {exampleSlots.map((s, i) => {
+              const x=(s.x/100)*FW, y=(s.y/100)*FH;
+              const bin = getBin(s.pts);
+              const fill = s.pts === 0 ? "rgba(224,88,78,.32)" : "var(--gold)";
+              const textFill = "#1a1206";
+              return (
+                <g key={i}>
+                  <circle cx={x} cy={y} r={R} fill={fill} stroke="var(--gold-deep)" strokeWidth="2" />
+                  <text x={x} y={y-3} textAnchor="middle" fontSize={isSeven?13:10} fontWeight="700"
+                        fontFamily="'Barlow Condensed',sans-serif" fill={textFill} style={{ pointerEvents:"none" }}>
+                    +{s.pts}
+                  </text>
+                  <text x={x} y={y+isSeven?12:9} textAnchor="middle" fontSize={isSeven?11:9} fontWeight="700"
+                        fontFamily="'Barlow Condensed',sans-serif" fill={textFill} style={{ pointerEvents:"none" }}>
+                    {s.team}
+                  </text>
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+
+        {/* SCORING KEY */}
+        <div className="cond" style={{ fontSize:12, letterSpacing:".18em", color:"var(--dim)", textTransform:"uppercase", marginBottom:8 }}>
+          Scoring key
+        </div>
+        <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:20 }}>
+          {[
+            { color:"#E0792F", label:"1–24 pts", desc:"Common pick" },
+            { color:"#E8C24A", label:"25–44 pts", desc:"Solid pull" },
+            { color:"#4FA85E", label:"45–64 pts", desc:"Deep cut" },
+            { color:"#2BCB72", label:"65+ pts",   desc:"Certified deep cut" },
+            { color:"#C2433B", label:"✗",          desc:"Missed" },
+          ].map((item, i) => (
+            <div key={i} style={{ display:"flex", alignItems:"center", gap:6 }}>
+              <div style={{ width:14, height:14, borderRadius:3, background:item.color, flexShrink:0 }} />
+              <span className="cond" style={{ fontSize:12, color:"var(--dim)" }}>
+                <strong style={{ color:"var(--chalk)" }}>{item.label}</strong> — {item.desc}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* GRADES */}
+        <div className="cond" style={{ fontSize:12, letterSpacing:".18em", color:"var(--dim)", textTransform:"uppercase", marginBottom:8 }}>
+          Rankings
+        </div>
+        <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:20 }}>
+          {[["🏆","Hall of Famer","80+ avg"],["⭐","All-Pro","66+"],["🏈","Pro Bowler","52+"],["🟢","Starter","38+"],["🧤","Backup","22+"],["📋","Practice Squad","8+"],["✂️","Camp Cut","0–7"]].map(([icon,title,pts],i)=>(
+            <div key={i} className="cond" style={{ fontSize:12, color:"var(--dim)", display:"flex", alignItems:"center", gap:4, background:"var(--inset)", padding:"3px 8px", borderRadius:4 }}>
+              <span>{icon}</span>
+              <span style={{ color:"var(--chalk)", fontWeight:700 }}>{title}</span>
+              <span style={{ color:"var(--faint)" }}>({pts})</span>
+            </div>
+          ))}
+        </div>
+
+        <button className="tab on" style={{ width:"100%", padding:"12px 0", fontSize:16 }} onClick={onClose}>
+          Got it — let's play!
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   ENDLESS MODE â full-roster boards, position categories
    ============================================================ */
 function EndlessMode({ league, L, toast }) {
   const [found, setFound] = useState(() => new Set());
@@ -404,21 +583,21 @@ function EndlessMode({ league, L, toast }) {
     const res = resolveGuess(L, g);
     if (res.ambiguous) {
       setShake(true); setTimeout(() => setShake(false), 380);
-      toast(`${res.ambiguous} different players match that last name — give me a full name.`);
+      toast(`${res.ambiguous} different players match that last name â give me a full name.`);
       el.select();
       return;
     }
     const matches = res.entries;
     if (!matches.length) {
       setShake(true); setTimeout(() => setShake(false), 380);
-      toast("No match on this board — check spelling, or switch leagues.");
+      toast("No match on this board â check spelling, or switch leagues.");
       el.focus();
       return;
     }
     const inScope = isAll ? matches : matches.filter((m) => m.group === scope);
     if (!inScope.length) {
       setShake(true); setTimeout(() => setShake(false), 380);
-      toast(`${matches[0].name} is a ${matches[0].group} — you're hunting ${scope}s right now.`);
+      toast(`${matches[0].name} is a ${matches[0].group} â you're hunting ${scope}s right now.`);
       el.select();
       return;
     }
@@ -441,8 +620,8 @@ function EndlessMode({ league, L, toast }) {
       sSet(`endless_log_v4:${league}`, nextLog);
       toast(
         entry.teams.length > 1
-          ? `${entry.name} (${entry.group}) — journeyman! ${entry.teams.length} teams, +${entry.pts} pts`
-          : `${entry.name} (${entry.group}) — ${TIER_LABEL[entry.maxTier].toLowerCase()}, +${entry.pts} pts`
+          ? `${entry.name} (${entry.group}) â journeyman! ${entry.teams.length} teams, +${entry.pts} pts`
+          : `${entry.name} (${entry.group}) â ${TIER_LABEL[entry.maxTier].toLowerCase()}, +${entry.pts} pts`
       );
       el.value = "";
     } else {
@@ -480,7 +659,7 @@ function EndlessMode({ league, L, toast }) {
         <div><div className="statnum">{scopedLog.length}</div><div className="statlab">Correct calls</div></div>
         {bestPull && (
           <div style={{ marginLeft: "auto", textAlign: "right" }}>
-            <div className="cond" style={{ fontSize: 16, fontWeight: 700 }}>{bestPull.name} · {bestPull.teams.length} teams</div>
+            <div className="cond" style={{ fontSize: 16, fontWeight: 700 }}>{bestPull.name} Â· {bestPull.teams.length} teams</div>
             <div className="statlab">Best journeyman pull</div>
           </div>
         )}
@@ -500,8 +679,8 @@ function EndlessMode({ league, L, toast }) {
       <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
         <input ref={inputRef} className={`guessbox ${shake ? "shake" : ""}`}
           placeholder={isAll
-            ? `Name any ${LEAGUE_LABEL[league]} player — any position, any era since 1970`
-            : `Name any ${LEAGUE_LABEL[league]} ${scope} — last names work if they're unique`}
+            ? `Name any ${LEAGUE_LABEL[league]} player â any position, any era since 1970`
+            : `Name any ${LEAGUE_LABEL[league]} ${scope} â last names work if they're unique`}
           onKeyDown={(e) => e.key === "Enter" && submit()}
           autoComplete="off" autoCorrect="off" spellCheck="false" />
         <button className="tab on" style={{ padding: "8px 26px", fontSize: 17 }} onClick={submit}>Call it</button>
@@ -535,7 +714,7 @@ function EndlessMode({ league, L, toast }) {
             })}
           </svg>
           <div className="cond" style={{ padding: "6px 8px 4px", fontSize: 12, color: "var(--faint)", letterSpacing: ".06em" }}>
-            Tap a team to open its locker room · dots fill gold as you clear {isAll ? "the roster" : "the " + scope + " room"}
+            Tap a team to open its locker room Â· dots fill gold as you clear {isAll ? "the roster" : "the " + scope + " room"}
           </div>
         </div>
 
@@ -543,7 +722,7 @@ function EndlessMode({ league, L, toast }) {
           {/* categories */}
           <div className="card" style={{ padding: "12px 14px" }}>
             <div className="cond" style={{ fontSize: 13, fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: "var(--dim)", marginBottom: 8 }}>
-              {isAll ? "By position group" : `What you've pulled · ${scope}`}
+              {isAll ? "By position group" : `What you've pulled Â· ${scope}`}
             </div>
             {isAll && (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 6, marginBottom: 10 }}>
@@ -579,7 +758,7 @@ function EndlessMode({ league, L, toast }) {
             </div>
             {scopedLog.length === 0 && (
               <div style={{ color: "var(--faint)", fontSize: 14, padding: "8px 0" }}>
-                Nothing on the tape yet. {scopeTotal.toLocaleString()} {isAll ? "names" : scope + " entries"} are out there — deep cuts pay 5x.
+                Nothing on the tape yet. {scopeTotal.toLocaleString()} {isAll ? "names" : scope + " entries"} are out there â deep cuts pay 5x.
               </div>
             )}
             {scopedLog.slice(0, 30).map((e) => (
@@ -592,7 +771,7 @@ function EndlessMode({ league, L, toast }) {
                   <span style={{ minWidth: 0 }}>
                     {e.teams.map((id) => <span key={id} className="chip">{id}</span>)}
                     {e.teams.length > 1 && (
-                      <span className="cond" style={{ fontSize: 12, color: "var(--gold)", marginLeft: 4 }}>×{e.teams.length} teams</span>
+                      <span className="cond" style={{ fontSize: 12, color: "var(--gold)", marginLeft: 4 }}>Ã{e.teams.length} teams</span>
                     )}
                   </span>
                   <TierTag tier={e.maxTier} />
@@ -631,7 +810,7 @@ function EndlessMode({ league, L, toast }) {
               <div key={p.key + p.name} className="panelrow">
                 <span style={{ fontWeight: 600 }}>{p.name}
                   {p.y0 > 0 && <span className="cond" style={{ color: "var(--faint)", fontSize: 12, marginLeft: 6 }}>
-                    {p.y0 === p.y1 ? p.y0 : `${p.y0}–${String(p.y1).slice(2)}`}</span>}
+                    {p.y0 === p.y1 ? p.y0 : `${p.y0}â${String(p.y1).slice(2)}`}</span>}
                 </span>
                 <TierTag tier={p.tier} />
               </div>
@@ -644,13 +823,13 @@ function EndlessMode({ league, L, toast }) {
           )}
         </div>
       )}
-      {!loaded && <div className="cond" style={{ marginTop: 8, color: "var(--dim)" }}>Loading your board…</div>}
+      {!loaded && <div className="cond" style={{ marginTop: 8, color: "var(--dim)" }}>Loading your boardâ¦</div>}
     </div>
   );
 }
 
 /* ============================================================
-   DAILY MODE — Daily 7 (skill, casual core) + Daily 11 (full
+   DAILY MODE â Daily 7 (skill, casual core) + Daily 11 (full
    offense, challenge). Re-roll mechanic, team-keyed pick rates,
    banded difficulty, percentile framing, streaks.
    ============================================================ */
@@ -691,7 +870,7 @@ const FORMATS = {
     ],
   },
 };
-const BAND_MARK = ["", "▲", "▲▲"];
+const BAND_MARK = ["", "â²", "â²â²"];
 /* decorative (non-guessable) O-line shown on Daily 7 as faint Xs so the
    formation reads like a real offense without looking like guessable spots */
 const GHOST_OL = [
@@ -750,9 +929,9 @@ function estPickPct(player, slotCounts) {
   return ((prior / 100) * PRIOR_W + mine) / (PRIOR_W + total) * 100;
 }
 const ptsFromPct = (pct) => Math.max(1, Math.round(100 - pct));
-/* one source of truth: a point value -> performance bin (0 miss … 4 best) */
+/* one source of truth: a point value -> performance bin (0 miss â¦ 4 best) */
 const ptsBin = (p) => (p <= 0 ? 0 : p >= 94 ? 4 : p >= 85 ? 3 : p >= 70 ? 2 : 1);
-const BIN_EMOJI = ["🟥", "🟧", "🟨", "🟩", "🔥"];
+const BIN_EMOJI = ["ð¥", "ð§", "ð¨", "ð©", "ð¥"];
 const BIN_COLOR = ["#C2433B", "#E0792F", "#E8C24A", "#4FA85E", "#2BCB72"];
 const BIN_LABEL = ["missed", "chalk", "solid", "deep", "deep cut"];
 const ptsEmoji = (p) => BIN_EMOJI[ptsBin(p)];
@@ -770,8 +949,8 @@ function reactBits(bin) {
 
 /* football rank grade from avg points/slot (rewards completion AND rarity) */
 const RANKS = [
-  [80, "Hall of Famer", "🏆"], [66, "All-Pro", "⭐"], [52, "Pro Bowler", "🏈"],
-  [38, "Starter", "🟢"], [22, "Backup", "🔧"], [8, "Practice Squad", "📋"], [0, "Camp Cut", "✂️"],
+  [80, "Hall of Famer", "ð"], [66, "All-Pro", "â­"], [52, "Pro Bowler", "ð"],
+  [38, "Starter", "ð¢"], [22, "Backup", "ð§"], [8, "Practice Squad", "ð"], [0, "Camp Cut", "âï¸"],
 ];
 function gradeFor(total, N) {
   const avg = N ? total / N : 0;
@@ -801,6 +980,8 @@ function DailyMode({ league, L, toast, fmtKey }) {
   const [loaded, setLoaded] = useState(false);
   const [copied, setCopied] = useState(false);
   const [react, setReact] = useState(null);
+  const [showInstructions, setShowInstructions] = useState(false);
+  const [isReplay, setIsReplay] = useState(false);
   const finishedRef = useRef(false);
   const inputRef = useRef(null);
 
@@ -894,6 +1075,16 @@ function DailyMode({ league, L, toast, fmtKey }) {
     setPickCache((c) => ({ ...c, [k]: fresh }));
   };
 
+  const startReplay = () => {
+    setAnswers(baseSlots.map(() => null));
+    setSlots(baseSlots);
+    setRerolls(fmt.rerolls);
+    setSel(0);
+    setIsReplay(true);
+    setReact(null);
+    finishedRef.current = false;
+  };
+
   const reroll = () => {
     if (rerolls <= 0 || answers[sel] !== null) return;
     const slot = slots[sel];
@@ -902,11 +1093,11 @@ function DailyMode({ league, L, toast, fmtKey }) {
     const pool = buildWeightedPool(league, L, rng)
       .filter((t) => !onBoard.has(t.id) && pairBand(t, slot.g, league) <= 1);
     const cand = pool[0] || buildWeightedPool(league, L, rng).find((t) => !onBoard.has(t.id) && (t.groups[slot.g] || []).length >= 3);
-    if (!cand) { toast("No fresh teams left to roll — you'll have to take this one."); return; }
+    if (!cand) { toast("No fresh teams left to roll â you'll have to take this one."); return; }
     const nextSlots = slots.map((s, i) => i === sel ? { ...s, team: cand, actualBand: pairBand(cand, s.g, league) } : s);
     const nr = rerolls - 1;
     setSlots(nextSlots); setRerolls(nr); persist(answers, nr, nextSlots);
-    toast(`🎲 Re-rolled — now a ${cand.name} ${slot.g}. ${nr} left.`);
+    toast(`ð² Re-rolled â now a ${cand.name} ${slot.g}. ${nr} left.`);
     if (inputRef.current) { inputRef.current.value = ""; inputRef.current.focus(); }
   };
 
@@ -926,7 +1117,7 @@ function DailyMode({ league, L, toast, fmtKey }) {
       if (distinct.length === 1) hit = suffix[0];
       else if (distinct.length > 1) {
         setShake(true); setTimeout(() => setShake(false), 380);
-        toast(`${distinct.length} ${slot.team.name} ${slot.g}s share that name — full name to lock it.`);
+        toast(`${distinct.length} ${slot.team.name} ${slot.g}s share that name â full name to lock it.`);
         el.select(); return;
       }
     }
@@ -939,25 +1130,25 @@ function DailyMode({ league, L, toast, fmtKey }) {
       setAnswers(next); persist(next, rerolls);
       setReact({ idx: sel, bin: ptsBin(pts), key: Date.now() });
       recordSharedPick(slot.team.id, slot.g, hit.key);
-      toast(`${hit.name} · ~${pct.toFixed(0)}% pick rate · +${pts} pts`);
+      toast(`${hit.name} Â· ~${pct.toFixed(0)}% pick rate Â· +${pts} pts`);
     } else {
       const res = resolveGuess(L, g);
       if (res.ambiguous) {
         setShake(true); setTimeout(() => setShake(false), 380);
-        toast("That last name matches several players — full name, no penalty.");
+        toast("That last name matches several players â full name, no penalty.");
         el.select(); return;
       }
       if (!res.entries.length) {
         setShake(true); setTimeout(() => setShake(false), 380);
-        toast("Not in the database at all — no harm, try another name.");
+        toast("Not in the database at all â no harm, try another name.");
         el.focus(); return;
       }
       next[sel] = { miss: true, pts: 0, guess: el.value.trim() };
       setAnswers(next); persist(next, rerolls);
       setShake(true); setTimeout(() => setShake(false), 380);
       toast(rerolls > 0
-        ? `Not a ${slot.team.name} ${slot.g} — spot's burned. Tip: 🎲 re-roll teams you don't know.`
-        : `Not a ${slot.team.name} ${slot.g} — spot's burned.`);
+        ? `Not a ${slot.team.name} ${slot.g} â spot's burned. Tip: ð² re-roll teams you don't know.`
+        : `Not a ${slot.team.name} ${slot.g} â spot's burned.`);
     }
     el.value = "";
     const open = next.findIndex((a) => a === null);
@@ -971,8 +1162,8 @@ function DailyMode({ league, L, toast, fmtKey }) {
     const used = fmt.rerolls - rerolls;
     const grade = gradeFor(total, N);
     const lines = [
-      `🏈 ${BRAND_SHORT} #${dayNum} — ${LEAGUE_LABEL[league]} ${N}`,
-      `${grade.icon} ${grade.title} · ${total} pts · ${hits}/${N}${streak > 1 ? ` · 🔥${streak}` : ""}${used ? ` · 🎲${used}` : ""}`,
+      `ð ${BRAND_SHORT} #${dayNum} â ${LEAGUE_LABEL[league]} ${N}`,
+      `${grade.icon} ${grade.title} Â· ${total} pts Â· ${hits}/${N}${streak > 1 ? ` Â· ð¥${streak}` : ""}${used ? ` Â· ð²${used}` : ""}`,
       row,
     ];
     if (pctile !== null) lines.push(`Better than ${pctile}% of today's players`);
@@ -1002,18 +1193,26 @@ function DailyMode({ league, L, toast, fmtKey }) {
       <div style={{ display: "flex", alignItems: "flex-end", gap: 16, flexWrap: "wrap", margin: "16px 0 10px" }}>
         <div>
           <div className="disp" style={{ fontSize: "clamp(24px,5.5vw,36px)", lineHeight: 1.1 }}>
-            <span style={{ color: "var(--gold)" }}>{LEAGUE_LABEL[league]} {N}</span> · Day #{dayNum}
+            <span style={{ color: "var(--gold)" }}>{LEAGUE_LABEL[league]} {N}</span> Â· Day #{dayNum}
           </div>
           <div className="cond" style={{ color: "var(--dim)", fontSize: 15, letterSpacing: ".06em", marginTop: 4 }}>
-            {isSeven ? "The skill players. One per team, one guess each." : "Full offense — linemen and all. For the sickos."}
-            {" "}· 🎲 {rerolls} re-rolls{ !isSeven && " · ▲ = deep water"}
+            {isSeven ? "The skill players. One per team, one guess each." : "Full offense â linemen and all. For the sickos."}
+            {" "}Â· ð² {rerolls} re-rolls{ !isSeven && " Â· â² = deep water"}
           </div>
         </div>
+        <button
+          className="tab"
+          style={{ alignSelf: "flex-start", padding: "6px 12px", fontSize: 14, marginTop: 4 }}
+          onClick={() => setShowInstructions(true)}
+          title="How to play"
+        >
+          ? How to play
+        </button>
         <div style={{ marginLeft: "auto", textAlign: "right" }}>
           <div className="disp" style={{ fontSize: 38, color: "var(--gold)", lineHeight: 1 }}>{total}</div>
           <div className="cond" style={{ fontSize: 13, color: "var(--dim)", letterSpacing: ".1em" }}>
-            PTS · 🎲{"●".repeat(rerolls) || "0"} · {answers.filter((a) => a !== null).length}/{N}
-            {streak > 1 ? ` · 🔥${streak}` : ""}
+            PTS Â· ð²{"â".repeat(rerolls) || "0"} Â· {answers.filter((a) => a !== null).length}/{N}
+            {streak > 1 ? ` Â· ð¥${streak}` : ""}
           </div>
         </div>
       </div>
@@ -1055,7 +1254,7 @@ function DailyMode({ league, L, toast, fmtKey }) {
                 <circle cx={x} cy={y} r={R} fill={fill} stroke={stroke} strokeWidth={isSel ? 3 : 2.5} />
                 <text x={x} y={y - 3} textAnchor="middle" fontSize={idFont} fontWeight="700"
                   fontFamily="'Barlow Condensed',sans-serif" fill={a && !a.miss ? "#1a1206" : "var(--gold)"} style={{ pointerEvents: "none" }}>
-                  {a ? (a.miss ? "✕" : `+${a.pts}`) : s.g}
+                  {a ? (a.miss ? "â" : `+${a.pts}`) : s.g}
                 </text>
                 <text x={x} y={y + idFont - 2} textAnchor="middle" fontSize={nameFont} fontWeight="700"
                   fontFamily="'Barlow Condensed',sans-serif" fill={a && !a.miss ? "#1a1206" : "var(--chalk)"} style={{ pointerEvents: "none" }}>
@@ -1095,32 +1294,47 @@ function DailyMode({ league, L, toast, fmtKey }) {
       {!done ? (
         <div style={{ marginTop: 16 }}>
           <div className="cond" style={{ marginBottom: 10, fontSize: 18, color: "var(--dim)" }}>
-            Spot: <span style={{ color: "var(--gold)", fontWeight: 700 }}>{slots[sel].g} · {slots[sel].team.name}</span>
+            Spot: <span style={{ color: "var(--gold)", fontWeight: 700 }}>{slots[sel].g} Â· {slots[sel].team.name}</span>
             {slots[sel].actualBand > 0 && <span style={{ color: "var(--gold)", marginLeft: 6 }}>{BAND_MARK[slots[sel].actualBand]} deep water</span>}
           </div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             <input ref={inputRef} className={`guessbox ${shake ? "shake" : ""}`} style={{ fontSize: 19, padding: "15px 18px", flex: "1 1 240px" }}
-              placeholder={`A ${slots[sel].team.name} ${slots[sel].g}…`}
+              placeholder={`A ${slots[sel].team.name} ${slots[sel].g}â¦`}
               onKeyDown={(e) => e.key === "Enter" && submit()}
               autoComplete="off" autoCorrect="off" spellCheck="false" />
             <button className="tab on" style={{ padding: "10px 30px", fontSize: 18 }} onClick={submit}>Lock it</button>
             <button className="tab" style={{ padding: "10px 18px", fontSize: 16, opacity: rerolls > 0 ? 1 : 0.4 }}
               disabled={rerolls <= 0} onClick={reroll} title="Swap this team for a random different one">
-              🎲 Re-roll ({rerolls})
+              ð² Re-roll ({rerolls})
             </button>
           </div>
-          {!loaded && <div className="cond" style={{ marginTop: 8, color: "var(--dim)" }}>Syncing today's pick rates…</div>}
+          {!loaded && <div className="cond" style={{ marginTop: 8, color: "var(--dim)" }}>Syncing today's pick ratesâ¦</div>}
         </div>
       ) : (
-        <div className="card pop" style={{ marginTop: 16, borderColor: "var(--gold)", padding: "20px" }}>
+        <div className="card pop" style={{ marginTop: 16, borderColor: isReplay ? "var(--miss)" : "var(--gold)", padding: "20px", background: isReplay ? "rgba(224,88,78,.07)" : undefined }}>
+          {isReplay && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14,
+                          background: "rgba(224,88,78,.18)", borderRadius: 6, padding: "8px 12px",
+                          border: "1px solid rgba(224,88,78,.4)" }}>
+              <span style={{ fontSize: 18 }}>🔁</span>
+              <div>
+                <div className="cond" style={{ fontWeight: 700, color: "var(--miss)", fontSize: 15, letterSpacing: ".06em" }}>
+                  REPLAY — Not today's official score
+                </div>
+                <div className="cond" style={{ color: "var(--dim)", fontSize: 12, marginTop: 1 }}>
+                  Your first attempt is the one that counts. Replays can't be shared as today's result.
+                </div>
+              </div>
+            </div>
+          )}
           {/* grade headline */}
           <div style={{ textAlign: "center", marginBottom: 16 }}>
-            <div className="cond" style={{ fontSize: 12, letterSpacing: ".22em", color: "var(--dim)", textTransform: "uppercase" }}>Today's grade</div>
-            <div className="disp" style={{ fontSize: "clamp(30px,7vw,46px)", color: "var(--gold)", lineHeight: 1.05, margin: "4px 0 6px" }}>
+            <div className="cond" style={{ fontSize: 12, letterSpacing: ".22em", color: "var(--dim)", textTransform: "uppercase" }}>{isReplay ? "🔁 Replay Score" : "Today's grade"}</div>
+            <div className="disp" style={{ fontSize: "clamp(30px,7vw,46px)", color: {isReplay ? "var(--miss)" : "var(--gold)"}, lineHeight: 1.05, margin: "4px 0 6px" }}>
               {gradeFor(total, N).icon} {gradeFor(total, N).title}
             </div>
             <div className="cond" style={{ fontSize: 18, color: "var(--chalk)" }}>
-              {total} pts · {hits}/{N} filled{fmt.rerolls - rerolls > 0 ? ` · 🎲 ${fmt.rerolls - rerolls}` : ""}{streak > 1 ? ` · 🔥 ${streak}` : ""}
+              {total} pts Â· {hits}/{N} filled{fmt.rerolls - rerolls > 0 ? ` Â· ð² ${fmt.rerolls - rerolls}` : ""}{streak > 1 ? ` Â· ð¥ ${streak}` : ""}
             </div>
             {pctile !== null && (
               <div className="cond" style={{ color: "var(--gold)", fontSize: 15, marginTop: 4 }}>Better than {pctile}% of today's players</div>
@@ -1143,7 +1357,7 @@ function DailyMode({ league, L, toast, fmtKey }) {
           <div className="cond" style={{ textAlign: "center", fontSize: 13, color: "var(--dim)", marginBottom: 16 }}>
             {gradeFor(total, N).next
               ? `${gradeFor(total, N).toNext} more pts to ${gradeFor(total, N).next}`
-              : "Top of the league — nothing left to prove."}
+              : "Top of the league â nothing left to prove."}
           </div>
 
           {/* at-a-glance color grid */}
@@ -1151,7 +1365,7 @@ function DailyMode({ league, L, toast, fmtKey }) {
             {answers.map((s, i) => {
               const bin = ptsBin(s?.pts || 0);
               return (
-                <div key={i} title={`${slots[i].g} · ${slots[i].team.name}: ${s?.miss ? "missed" : BIN_LABEL[bin]}`}
+                <div key={i} title={`${slots[i].g} Â· ${slots[i].team.name}: ${s?.miss ? "missed" : BIN_LABEL[bin]}`}
                   style={{
                     width: 38, height: 38, borderRadius: 7, background: BIN_COLOR[bin],
                     display: "flex", alignItems: "center", justifyContent: "center",
@@ -1159,7 +1373,7 @@ function DailyMode({ league, L, toast, fmtKey }) {
                     fontFamily: "'Barlow Condensed',sans-serif",
                     border: bin === 0 ? "1px solid rgba(224,88,78,.5)" : "none",
                   }}>
-                  {s?.miss ? "✕" : s ? `+${s.pts}` : ""}
+                  {s?.miss ? "â" : s ? `+${s.pts}` : ""}
                 </div>
               );
             })}
@@ -1173,24 +1387,45 @@ function DailyMode({ league, L, toast, fmtKey }) {
               </span>
             ))}
             <span className="cond" style={{ fontSize: 12, color: "var(--dim)", display: "flex", alignItems: "center", gap: 5 }}>
-              <span style={{ color: "var(--miss)", fontWeight: 800 }}>✕</span> missed
+              <span style={{ color: "var(--miss)", fontWeight: 800 }}>â</span> missed
             </span>
           </div>
 
           {/* per-slot detail */}
           {answers.map((a, i) => (
             <div key={i} className="panelrow" style={{ fontSize: 16 }}>
-              <span><span style={{ color: "var(--dim)" }}>{slots[i].g} · {slots[i].team.name}:</span>{" "}
+              <span><span style={{ color: "var(--dim)" }}>{slots[i].g} Â· {slots[i].team.name}:</span>{" "}
                 {a.miss ? <span style={{ color: "var(--miss)" }}>missed{a.guess ? ` (${a.guess})` : ""}</span> : <strong>{a.name}</strong>}</span>
-              <span style={{ color: "var(--gold)" }}>{a.miss ? "0" : `~${a.pct.toFixed(0)}% · +${a.pts}`}</span>
+              <span style={{ color: "var(--gold)" }}>{a.miss ? "0" : `~${a.pct.toFixed(0)}% Â· +${a.pts}`}</span>
             </div>
           ))}
-          <button className="tab on" style={{ marginTop: 16, padding: "11px 28px", fontSize: 16 }} onClick={copyShare}>
-            {copied ? "Copied — go flex" : "Copy result"}
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 16 }}>
+          {!isReplay && (
+            <button className="tab on" style={{ padding: "11px 28px", fontSize: 16 }} onClick={copyShare}>
+              {copied ? "Copied — go flex" : "Copy result"}
+            </button>
+          )}
+          {isReplay && (
+            <div className="cond" style={{ fontSize: 13, color: "var(--miss)", padding: "11px 0", display: "flex", alignItems: "center", gap: 6 }}>
+              <span>🔁</span> Replay scores can't be shared — only your first attempt counts.
+            </div>
+          )}
+          <button
+            className="tab"
+            style={{ padding: "11px 22px", fontSize: 15 }}
+            onClick={startReplay}
+            title="Play again (won't affect your official score)"
+          >
+            🔁 Replay
           </button>
         </div>
+        </div>
       )}
-    </div>
+    
+      {showInstructions && (
+        <HowToPlayModal fmtKey={fmtKey} onClose={() => setShowInstructions(false)} />
+      )}
+  </div>
   );
 }
 
@@ -1236,7 +1471,7 @@ export default function App() {
             </div>
             <div className="cond" style={{ color: "var(--dim)", letterSpacing: ".14em", textTransform: "uppercase", fontSize: 13, marginTop: 6 }}>
               {data
-                ? `${data.nfl.total.toLocaleString()} NFL stints · ${data.cfb.total.toLocaleString()} college careers · every position`
+                ? `${data.nfl.total.toLocaleString()} NFL stints Â· ${data.cfb.total.toLocaleString()} college careers Â· every position`
                 : "The boys-arguing-at-the-bar roster quiz"}
             </div>
           </div>
@@ -1260,7 +1495,7 @@ export default function App() {
         )}
         {!data && !err && (
           <div className="card" style={{ padding: 24, marginTop: 16, textAlign: "center" }}>
-            <div className="disp" style={{ fontSize: 20, color: "var(--gold)" }}>Unpacking 33,000 rosters…</div>
+            <div className="disp" style={{ fontSize: 20, color: "var(--gold)" }}>Unpacking 33,000 rostersâ¦</div>
             <div className="cond" style={{ color: "var(--dim)", marginTop: 6 }}>Five and a half decades of depth charts incoming.</div>
           </div>
         )}
@@ -1269,10 +1504,10 @@ export default function App() {
           : <DailyMode key={`${league}-${mode}`} league={league} L={L} toast={toast} fmtKey={mode} />)}
 
         <footer className="cond" style={{ marginTop: 26, color: "var(--faint)", fontSize: 13, letterSpacing: ".04em", lineHeight: 1.6 }}>
-          Built from open data: every NFL draft class since 1967 (with school), full rosters 2006–2019 with
+          Built from open data: every NFL draft class since 1967 (with school), full rosters 2006â2019 with
           games/starts/approximate-value, the current league snapshot, and a hand-checked legends overlay for
           the icons. College boards cover every drafted NFL player since 1970 from {""}67 power-conference programs. Rarity tiers are computed from career production and
-          corrected by live pick rates. K/P/LS not included — the boys have standards.
+          corrected by live pick rates. K/P/LS not included â the boys have standards.
         </footer>
       </div>
       <Toast msg={toastMsg} />
