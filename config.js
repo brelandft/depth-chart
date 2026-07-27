@@ -9,9 +9,7 @@ window.DEPTH_CONFIG = {
   // Short tag used in the share text (e.g. "ANY GIVEN PLAYER #12 — NFL 7").
   brandShort: "ANY GIVEN PLAYER",
 
-  // Shared pick-rates + percentile backend.
+  // Shared pick-rates + percentile backend (Supabase Edge Functions).
   // Leave "" to run fully offline (per-device pick rates, no global percentile).
-  // Once you deploy the Cloudflare Worker in /worker, paste its URL here:
-  //   backendUrl: "https://depth-chart-api.YOURNAME.workers.dev"
-  backendUrl: "",
+  backendUrl: "https://jbdeflegiawsuxwcydsg.supabase.co/functions/v1",
 };

@@ -1,0 +1,22 @@
+name: Supabase keep-alive
+
+# Supabase's free tier pauses a project after 7 days with no database
+# activity. This pings the /get function (which runs a real `select`
+# against kv_store) twice a week — well inside that window with margin
+# for a missed run. Update BACKEND_URL below once the functions are
+# deployed and you have your real project URL.
+
+on:
+  schedule:
+    - cron: "0 12 * * 1" # every Monday, 12:00 UTC
+    - cron: "0 12 * * 4" # every Thursday, 12:00 UTC
+  workflow_dispatch: {} # lets you trigger it manually from the Actions tab
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping shared backend
+        run: |
+          curl -sf "https://jbdeflegiawsuxwcydsg.supabase.co/functions/v1/get?key=keepalive" \
+            || echo "Ping failed — check BACKEND_URL and function deploy status"

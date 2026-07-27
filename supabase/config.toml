@@ -1,0 +1,15 @@
+# Fill in your project's reference id (Project Settings -> General -> Reference ID)
+project_id = "jbdeflegiawsuxwcydsg"
+
+# These functions are called by anonymous players — no login exists yet —
+# so gateway-level JWT checking is off. This is the same trust level the
+# old Cloudflare Worker had (open, unauthenticated). Revisit once accounts
+# exist and it's worth requiring a real session.
+[functions.pick]
+verify_jwt = false
+
+[functions.get]
+verify_jwt = false
+
+[functions.set]
+verify_jwt = false
