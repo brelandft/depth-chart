@@ -26,7 +26,7 @@ OPTIONS (env vars):
 """
 
 import os, re, gzip, base64, json, unicodedata, datetime, sys
-from collections import defaultdict
+from collections import defaultdict, Counter
 
 try:
     import nflreadpy as nfl
@@ -125,6 +125,7 @@ print(f"  rosters: {ros.height} rows | players: {players.height} | draft: {draft
 c_season = col(ros, "season")
 c_team   = col(ros, "team", "recent_team")
 c_pos    = col(ros, "position", "depth_chart_position", "ngs_position")
+c_dcpos  = col(ros, "depth_chart_position")  # more specific than c_pos (e.g. "DB" -> "FS"/"SS") — used only to disambiguate S vs CB
 c_name   = col(ros, "full_name", "player_name", "player_display_name", "football_name")
 c_coll   = col(ros, "college")
 c_pid    = col(ros, "gsis_id", "player_id", "pfr_id")
@@ -155,10 +156,18 @@ if p_coll:
         if p_name and r.get(p_name): pl_coll.setdefault(("nm", norm(r[p_name])), cnm)
 
 # ---------- accumulate stints ----------
-# registry: pid -> {name, group, college, seasons:set, teams:{tid:{seasons:set}}}
+# registry: pid -> {name, group, college, seasons:set, teams:{tid:{seasons:set}}, pos_counts:Counter}
+SPECIFIC_S = {"S", "SS", "FS", "SAF"}
+SPECIFIC_CB = {"CB", "RCB", "LCB"}
+
 reg = {}
 for r in ros.iter_rows(named=True):
-    grp = to_group(r.get(c_pos))
+    raw_pos = (r.get(c_pos) or "").upper().strip()
+    if raw_pos == "DB" and c_dcpos:
+        dc_pos = (r.get(c_dcpos) or "").upper().strip()
+        if dc_pos in SPECIFIC_S or dc_pos in SPECIFIC_CB:
+            raw_pos = dc_pos  # generic "DB" tag; depth chart role tells us S vs CB
+    grp = to_group(raw_pos)
     if not grp: continue
     team = fix_team(r.get(c_team))
     if team not in NFL: continue
@@ -169,8 +178,9 @@ for r in ros.iter_rows(named=True):
     p = reg.get(pid)
     if not p:
         p = reg[pid] = {"name": name, "group": grp, "college": (r.get(c_coll) if c_coll else None),
-                        "seasons": set(), "teams": defaultdict(lambda: {"seasons": set()})}
-    p["group"] = p["group"] or grp
+                        "seasons": set(), "teams": defaultdict(lambda: {"seasons": set()}),
+                        "pos_counts": Counter()}
+    p["pos_counts"][raw_pos] += 1
     if season is not None:
         p["seasons"].add(season)
         p["teams"][team]["seasons"].add(season)
@@ -182,6 +192,19 @@ for pid, p in reg.items():
     if not p["college"]:
         key = ("id", pid) if not str(pid).startswith("nm:") else ("nm", norm(p["name"]))
         p["college"] = pl_coll.get(key) or pl_coll.get(("nm", norm(p["name"])))
+
+# resolve each player's group from their full career position history, not just
+# whichever season happened to load first — a generic "DB" tag in one season
+# shouldn't override a specific "S"/"FS"/"SS" tag seen in another (was silently
+# stranding safeties like Budda Baker and Antoine Winfield Jr. in the CB room).
+for pid, p in reg.items():
+    raws = set(p["pos_counts"])
+    if raws & SPECIFIC_S:
+        p["group"] = "S"
+    elif raws & SPECIFIC_CB:
+        p["group"] = "CB"
+    else:
+        p["group"] = to_group(p["pos_counts"].most_common(1)[0][0])
 
 # ---------- tiering: longevity percentile + draft capital, then propagate ----------
 career_seasons = {pid: len(p["seasons"]) for pid, p in reg.items()}

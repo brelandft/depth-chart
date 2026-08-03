@@ -6,6 +6,9 @@ Prints PASS/FAIL spot-checks plus a coverage summary. Exit code 0 = all good.
 """
 import os, re, gzip, base64, json, sys
 
+if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    sys.stdout.reconfigure(encoding="utf-8")  # Windows terminals default to cp1252, which can't print ✅/❌
+
 PATH = os.environ.get("DC_OUT", os.path.join(os.path.dirname(__file__), "..", "data.js"))
 GROUPS = ["QB", "RB", "WR", "TE", "OL", "DL", "LB", "CB", "S"]
 
