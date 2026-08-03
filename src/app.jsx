@@ -905,9 +905,9 @@ function buildWeightedPool(league, L, rng) {
   return pool;
 }
 
-function pickDailySlots(dateStr, league, L, fmtKey) {
+function pickSlotsForSeed(seedStr, league, L, fmtKey) {
   const fmt = FORMATS[fmtKey];
-  const rng = mulberry32(hashStr(`deep-cuts-${fmtKey}-${league}-${dateStr}`));
+  const rng = mulberry32(hashStr(seedStr));
   const pool = buildWeightedPool(league, L, rng);
   const used = new Set();
   return fmt.slots.map((s) => {
@@ -918,6 +918,10 @@ function pickDailySlots(dateStr, league, L, fmtKey) {
     used.add(team.id);
     return { ...s, team, actualBand: pairBand(team, s.g, league) };
   });
+}
+
+function pickDailySlots(dateStr, league, L, fmtKey) {
+  return pickSlotsForSeed(`deep-cuts-${fmtKey}-${league}-${dateStr}`, league, L, fmtKey);
 }
 
 /* team-keyed pick rates: survives re-rolls (key = team|group|player) */
@@ -1032,11 +1036,13 @@ function DailyMode({ league, L, toast, fmtKey }) {
   const hits = answers.filter((s) => s && !s.miss).length;
   const N = fmt.slots.length;
 
-  const persist = (nextAnswers, nextRerolls, nextSlots) =>
-    sSet(stateKey, {
+  const persist = (nextAnswers, nextRerolls, nextSlots) => {
+    if (isReplay) return; // replay progress is intentionally throwaway — never overwrites today's saved run
+    return sSet(stateKey, {
       answers: nextAnswers, rerolls: nextRerolls,
       teamIds: (nextSlots || slots).map((s) => s.team.id),
     });
+  };
 
   useEffect(() => {
     if (!done || !loaded || finishedRef.current) return;
@@ -1076,13 +1082,18 @@ function DailyMode({ league, L, toast, fmtKey }) {
   };
 
   const startReplay = () => {
-    setAnswers(baseSlots.map(() => null));
-    setSlots(baseSlots);
+    // A fresh random seed each time — replays are explicitly "not today's
+    // official board," so they should feel different, not like a rerun of
+    // the same puzzle.
+    const seed = `replay-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const randomSlots = pickSlotsForSeed(seed, league, L, fmtKey);
+    setAnswers(randomSlots.map(() => null));
+    setSlots(randomSlots);
     setRerolls(fmt.rerolls);
     setSel(0);
     setIsReplay(true);
     setReact(null);
-    finishedRef.current = false;
+    finishedRef.current = true; // see totals/streak effect below — replays must never write shared state
   };
 
   const reroll = () => {
