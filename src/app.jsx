@@ -1561,9 +1561,9 @@ export default function App() {
           : <DailyMode key={`${league}-${mode}`} league={league} L={L} toast={toast} fmtKey={mode} />)}
 
         <footer className="cond" style={{ marginTop: 26, color: "var(--faint)", fontSize: 13, letterSpacing: ".04em", lineHeight: 1.6 }}>
-          Built from open data: every NFL draft class since 1967 (with school), full rosters 2006–2019 with
-          games/starts/approximate-value, the current league snapshot, and a hand-checked legends overlay for
-          the icons. College boards cover every drafted NFL player since 1970 from {""}67 power-conference programs. Rarity tiers are computed from career production and
+          Built from open data: full NFL rosters, season by season, from 1970 through today, tiered by career
+          longevity and draft capital with hand-tuned corrections for stars who broke out fast. College boards
+          cover every drafted NFL player since 1970 from {""}67 power-conference programs. Rarity tiers are computed from career production and
           corrected by live pick rates. K/P/LS not included — the boys have standards.
         </footer>
       </div>
