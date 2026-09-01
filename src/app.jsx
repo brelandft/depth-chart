@@ -296,8 +296,15 @@ const THEME_CSS = `
   letter-spacing:.14em;text-transform:uppercase;margin-top:4px}
 @keyframes wrqword{0%{opacity:0;transform:translateY(8px)}20%{opacity:1;transform:translateY(0)}70%{opacity:1;transform:translateY(-7px)}100%{opacity:0;transform:translateY(-20px)}}
 @keyframes wrqmeh{0%{opacity:0}25%{opacity:.85;transform:translate(0,0)}55%{transform:translate(-2px,1px) rotate(-3deg)}72%{transform:translate(2px,1px) rotate(3deg)}100%{opacity:0;transform:translate(0,3px)}}
+@keyframes wrqfilthy{0%{opacity:0;transform:translateY(6px) scale(.6)}18%{opacity:1;transform:translateY(0) scale(1.3)}34%{transform:translateY(-3px) scale(1)}75%{opacity:1;transform:translateY(-10px) scale(1)}100%{opacity:0;transform:translateY(-28px) scale(1)}}
 @keyframes wrqcfetti{0%{opacity:0;transform:translate(0,0) rotate(0)}12%{opacity:1}100%{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(var(--rot))}}
 .wrq .cfetti{transform-box:fill-box;transform-origin:center}
+@keyframes wrqscorepop{0%{transform:scale(1);filter:drop-shadow(0 0 0 transparent)}30%{transform:scale(1.3);filter:drop-shadow(0 0 14px var(--glow))}100%{transform:scale(1);filter:drop-shadow(0 0 0 transparent)}}
+.wrq .scorepop{display:inline-block;animation:wrqscorepop .7s ease-out}
+@keyframes wrqdotpunch{0%{transform:scale(1)}35%{transform:scale(1.4)}60%{transform:scale(.92)}100%{transform:scale(1)}}
+.wrq .slot.punch{animation:wrqdotpunch .6s cubic-bezier(.34,1.56,.64,1)}
+@keyframes wrqcardflash{0%{box-shadow:inset 0 0 0 0 rgba(43,203,114,0);background-color:rgba(43,203,114,.22)}18%{box-shadow:inset 0 0 0 4px rgba(43,203,114,.95);background-color:rgba(43,203,114,.14)}100%{box-shadow:inset 0 0 0 0 rgba(43,203,114,0);background-color:rgba(43,203,114,0)}}
+.wrq .deepflash{position:absolute;inset:0;border-radius:inherit;pointer-events:none;animation:wrqcardflash .9s ease-out forwards}
 @media (prefers-reduced-motion: reduce){.wrq *{animation:none!important;transition:none!important}}
 `;
 
@@ -942,11 +949,12 @@ const ptsEmoji = (p) => BIN_EMOJI[ptsBin(p)];
 /* escalating lock reaction: word + confetti count scale with the points tier */
 const REACT_WORD = ["", "meh", "not bad", "nice!", "filthy!"];
 function reactBits(bin) {
-  const n = [0, 0, 2, 4, 7][bin] || 0;
+  const n = [0, 0, 2, 6, 14][bin] || 0;
   const cols = ["#F2B63B", "#FFFFFF", BIN_COLOR[bin] || "#F2B63B"];
+  const spread = bin >= 4 ? 46 : bin >= 3 ? 40 : 36;
   return Array.from({ length: n }).map((_, k) => {
     const ang = -Math.PI / 2 + (k - (n - 1) / 2) * (Math.PI / (n + 1));
-    const dist = 36 + (k % 3) * 11;
+    const dist = spread + (k % 3) * 13;
     return { dx: (Math.cos(ang) * dist).toFixed(1), dy: (Math.sin(ang) * dist).toFixed(1), col: cols[k % 3], delay: (k % 4) * 0.04, rot: 150 + (k * 53) % 200 };
   });
 }
@@ -1266,7 +1274,11 @@ function DailyMode({ league, L, toast, fmtKey }) {
           ? How to play
         </button>
         <div style={{ marginLeft: "auto", textAlign: "right" }}>
-          <div className="disp" style={{ fontSize: 38, color: "var(--gold)", lineHeight: 1 }}>{total}</div>
+          <div className="disp" style={{ fontSize: 38, color: "var(--gold)", lineHeight: 1 }}>
+            {react && react.bin >= 3
+              ? <span key={react.key} className="scorepop" style={{ "--glow": BIN_COLOR[react.bin] }}>{total}</span>
+              : total}
+          </div>
           <div className="cond" style={{ fontSize: 13, color: "var(--dim)", letterSpacing: ".1em" }}>
             PTS · 🎲{"●".repeat(rerolls) || "0"} · {answers.filter((a) => a !== null).length}/{N}
             {streak > 1 ? ` · 🔥${streak}` : ""}
@@ -1274,7 +1286,8 @@ function DailyMode({ league, L, toast, fmtKey }) {
         </div>
       </div>
 
-      <div className="card" style={{ padding: 8, background: "var(--turf)", borderColor: "rgba(237,234,226,.2)" }}>
+      <div className="card" style={{ padding: 8, background: "var(--turf)", borderColor: "rgba(237,234,226,.2)", position: "relative", overflow: "hidden" }}>
+        {react && react.bin === 4 && <div key={react.key} className="deepflash" />}
         <svg viewBox={`0 0 ${FIELD_W} ${FIELD_H}`} style={{ width: "100%", height: "auto", display: "block" }} role="img" aria-label={`Offensive formation, ${N} spots`}>
           {Array.from({ length: isSeven ? 5 : 6 }).map((_, i) => {
             const rows = isSeven ? 6 : 7;
@@ -1303,12 +1316,13 @@ function DailyMode({ league, L, toast, fmtKey }) {
             const x = (s.x / 100) * FIELD_W, y = (s.y / 100) * FIELD_H;
             const a = answers[i];
             const isSel = sel === i && !a;
+            const isTop = a && !a.miss && ptsBin(a.pts) === 4;
             const fill = a ? (a.miss ? "rgba(224,88,78,.32)" : "var(--gold)") : isSel ? "rgba(237,234,226,.22)" : "rgba(16,19,24,.62)";
-            const stroke = a ? (a.miss ? "var(--miss)" : "var(--gold-deep)") : isSel ? "var(--gold)" : "rgba(237,234,226,.5)";
+            const stroke = a ? (a.miss ? "var(--miss)" : isTop ? "var(--gold)" : "var(--gold-deep)") : isSel ? "var(--gold)" : "rgba(237,234,226,.5)";
             return (
-              <g key={i} className="slot" onClick={() => !a && setSel(i)}>
+              <g key={i} className={`slot${isTop ? " punch" : ""}`} onClick={() => !a && setSel(i)}>
                 {isSel && <circle cx={x} cy={y} r={R + 9} fill="none" stroke="var(--gold)" strokeWidth="1.5" strokeDasharray="5 6" opacity=".9" />}
-                <circle cx={x} cy={y} r={R} fill={fill} stroke={stroke} strokeWidth={isSel ? 3 : 2.5} />
+                <circle cx={x} cy={y} r={R} fill={fill} stroke={stroke} strokeWidth={isSel ? 3 : isTop ? 4 : 2.5} />
                 <text x={x} y={y - 3} textAnchor="middle" fontSize={idFont} fontWeight="700"
                   fontFamily="'Barlow Condensed',sans-serif" fill={a && !a.miss ? "#1a1206" : "var(--gold)"} style={{ pointerEvents: "none" }}>
                   {a ? (a.miss ? "✕" : `+${a.pts}`) : s.g}
@@ -1332,15 +1346,16 @@ function DailyMode({ league, L, toast, fmtKey }) {
             <g key={react.key} style={{ pointerEvents: "none" }}>
               {reactBits(react.bin).map((b, k) => {
                 const sx = (slots[react.idx].x / 100) * FIELD_W, sy = (slots[react.idx].y / 100) * FIELD_H;
+                const cw = react.bin >= 4 ? 9 : react.bin >= 3 ? 7 : 6, ch = cw * 1.33;
                 return (
-                  <rect key={k} className="cfetti" x={sx - 3} y={sy - 4} width="6" height="8" rx="1" fill={b.col}
+                  <rect key={k} className="cfetti" x={sx - cw / 2} y={sy - ch / 2} width={cw} height={ch} rx="1.5" fill={b.col}
                     style={{ "--dx": b.dx + "px", "--dy": b.dy + "px", "--rot": b.rot + "deg", opacity: 0, animation: `wrqcfetti .85s ease-out ${b.delay}s forwards` }} />
                 );
               })}
               <text x={(slots[react.idx].x / 100) * FIELD_W} y={(slots[react.idx].y / 100) * FIELD_H - R - 10}
-                textAnchor="middle" fontSize={react.bin >= 4 ? 19 : react.bin >= 3 ? 16 : 14} fontWeight="800"
+                textAnchor="middle" fontSize={react.bin >= 4 ? 23 : react.bin >= 3 ? 16 : 14} fontWeight="800"
                 fontFamily="'Barlow Condensed',sans-serif" fill={BIN_COLOR[react.bin]}
-                style={{ opacity: 0, animation: `${react.bin === 1 ? "wrqmeh" : "wrqword"} 1.1s ease-out forwards` }}>
+                style={{ opacity: 0, animation: `${react.bin === 1 ? "wrqmeh" : react.bin >= 4 ? "wrqfilthy" : "wrqword"} 1.1s ease-out forwards` }}>
                 {REACT_WORD[react.bin]}
               </text>
             </g>
