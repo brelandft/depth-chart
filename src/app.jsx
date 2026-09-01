@@ -521,6 +521,7 @@ function EndlessMode({ league, L, toast }) {
   const [panelGroup, setPanelGroup] = useState("QB");
   const [scope, setScope] = useState("WR");
   const [shake, setShake] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(false);
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -670,11 +671,19 @@ function EndlessMode({ league, L, toast }) {
         <div><div className="statnum" style={{ color: "var(--gold)" }}>{score.toLocaleString()}</div><div className="statlab">Rarity score</div></div>
         <div><div className="statnum">{scopedLog.length}</div><div className="statlab">Correct calls</div></div>
         {bestPull && (
-          <div style={{ marginLeft: "auto", textAlign: "right" }}>
+          <div style={{ textAlign: "right" }}>
             <div className="cond" style={{ fontSize: 16, fontWeight: 700 }}>{bestPull.name} · {bestPull.teams.length} teams</div>
             <div className="statlab">Best journeyman pull</div>
           </div>
         )}
+        <button
+          className="tab"
+          style={{ marginLeft: "auto", padding: "6px 12px", fontSize: 14 }}
+          onClick={() => setShowInstructions(true)}
+          title="How to play"
+        >
+          ? How to play
+        </button>
       </div>
 
       {/* position scope */}
@@ -836,6 +845,56 @@ function EndlessMode({ league, L, toast }) {
         </div>
       )}
       {!loaded && <div className="cond" style={{ marginTop: 8, color: "var(--dim)" }}>Loading your board…</div>}
+      {showInstructions && <EndlessHelpModal onClose={() => setShowInstructions(false)} />}
+    </div>
+  );
+}
+
+function EndlessHelpModal({ onClose }) {
+  const rows = [
+    ["🎯", "Name anyone, any team", "Type any player who's ever played the position you're hunting. No slots, no wrong-answer penalty — just keep naming names."],
+    ["🗺️", "Clear the map", "Tap a team to see who you're missing. Dots fill gold as you clear out that team's room for the position you're hunting."],
+    ["💰", "Rarity score adds up", "Every find adds its tier to your score — 5 for a certified deep cut, 1 for a household name. Switch “Hunting” to a specific position, or hit “Everything” to go wide."],
+    ["💾", "Progress is saved", "No daily reset — your finds stick around. Come back and keep chipping away at the board whenever."],
+  ];
+  return (
+    <div
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.72)", zIndex: 1000,
+               display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+      onClick={e => e.target === e.currentTarget && onClose()}
+    >
+      <div className="card" style={{ maxWidth: 520, width: "100%", padding: "24px 20px", position: "relative",
+                                      maxHeight: "90vh", overflowY: "auto", border: "1px solid rgba(242,182,59,.35)" }}>
+        <button
+          onClick={onClose}
+          style={{ position: "absolute", top: 12, right: 14, background: "none", border: "none",
+                   color: "var(--dim)", fontSize: 22, cursor: "pointer", lineHeight: 1, padding: 4 }}
+          aria-label="Close instructions"
+        >×</button>
+
+        <div className="disp" style={{ fontSize: "clamp(20px,5vw,28px)", color: "var(--gold)", marginBottom: 6, paddingRight: 32 }}>
+          How to Play — Endless
+        </div>
+        <div className="cond" style={{ color: "var(--dim)", fontSize: 14, letterSpacing: ".05em", marginBottom: 16 }}>
+          No daily board, no limit — just you against the whole roster.
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
+          {rows.map(([icon, title, desc]) => (
+            <div key={title} className="card" style={{ padding: "10px 14px", background: "var(--inset)", display: "flex", gap: 12, alignItems: "flex-start" }}>
+              <span style={{ fontSize: 22, flexShrink: 0 }}>{icon}</span>
+              <div>
+                <div className="cond" style={{ fontWeight: 700, color: "var(--chalk)", fontSize: 15 }}>{title}</div>
+                <div className="cond" style={{ color: "var(--dim)", fontSize: 13, marginTop: 2 }}>{desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <button className="tab on" style={{ width: "100%", padding: "12px 0", fontSize: 16 }} onClick={onClose}>
+          Got it — let's hunt!
+        </button>
+      </div>
     </div>
   );
 }
