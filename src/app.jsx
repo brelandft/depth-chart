@@ -329,7 +329,7 @@ const Toast = ({ msg }) =>
 /* ============================================================
    HOW TO PLAY MODAL
    ============================================================ */
-function HowToPlayModal({ fmtKey, onClose }) {
+function HowToPlayModal({ fmtKey, onClose, isFirstRun }) {
   const isSeven = fmtKey === "seven";
   const positions = isSeven ? ["WR","TE","WR","QB","WR","RB","RB"] : ["WR","OL","OL","OL","OL","OL","TE","WR","QB","WR","RB"];
   const exampleSlots = isSeven
@@ -377,6 +377,11 @@ function HowToPlayModal({ fmtKey, onClose }) {
           aria-label="Close instructions"
         >×</button>
 
+        {isFirstRun && (
+          <div className="cond" style={{ fontSize:13, letterSpacing:".1em", textTransform:"uppercase", color:"var(--gold)", marginBottom:8, fontWeight:700 }}>
+            👋 New here? Quick rundown before you dive in.
+          </div>
+        )}
         <div className="disp" style={{ fontSize:"clamp(20px,5vw,28px)", color:"var(--gold)", marginBottom:6, paddingRight:32 }}>
           How to Play — {isSeven ? "Daily 7" : "Daily 11"}
         </div>
@@ -1518,6 +1523,15 @@ export default function App() {
     toastTimer.current = setTimeout(() => setToastMsg(""), 2800);
   }, []);
 
+  const [showFirstRun, setShowFirstRun] = useState(false);
+  useEffect(() => {
+    sGet("seen_intro_v1").then((seen) => { if (!seen) setShowFirstRun(true); });
+  }, []);
+  const dismissFirstRun = () => {
+    setShowFirstRun(false);
+    sSet("seen_intro_v1", true);
+  };
+
   useEffect(() => {
     loadPayload()
       .then((raw) => setData({ nfl: buildLeague(raw.nfl, "nfl"), cfb: buildLeague(raw.cfb, "cfb") }))
@@ -1582,6 +1596,9 @@ export default function App() {
           corrected by live pick rates. K/P/LS not included — the boys have standards.
         </footer>
       </div>
+      {showFirstRun && (
+        <HowToPlayModal fmtKey={mode === "eleven" ? "eleven" : "seven"} onClose={dismissFirstRun} isFirstRun />
+      )}
       <Toast msg={toastMsg} />
     </div>
   );
