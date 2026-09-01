@@ -228,7 +228,7 @@ def base_tier(pid, p):
 overlay = {}
 if os.path.exists(OVERLAY):
     import csv
-    with open(OVERLAY) as f:
+    with open(OVERLAY, encoding="utf-8") as f:
         for row in csv.DictReader(f):
             nm = (row.get("name") or "").strip()
             if not nm or nm.startswith("#") or not (row.get("tier") or "").strip():
@@ -309,7 +309,27 @@ payload = {"nfl": {k: dict(v) for k, v in nfl_out.items()},
            "cfb": {k: dict(v) for k, v in cfb_out.items()}}
 js = json.dumps(payload, separators=(",", ":"), ensure_ascii=False)
 b64 = base64.b64encode(gzip.compress(js.encode("utf-8"), 9)).decode()
-with open(OUT, "w") as f:
+with open(OUT, "w", encoding="utf-8") as f:
     f.write('window.DEPTH_DATA="' + b64 + '";\n')
 print(f"\nwrote {OUT}  ({len(js)/1e6:.2f}MB json -> {len(b64)/1e3:.0f}KB base64)")
+
+# The /pick Edge Function validates guesses against its own bundled copy of
+# this same blob (see supabase/functions/_shared/roster-data.ts) rather than
+# fetching data.js at request time. Keep it in lockstep here so the two never
+# drift the way they did for over a month (backend stuck on the July 27 snapshot
+# while data.js moved on through two audit passes).
+TS_OUT = os.environ.get("DC_ROSTER_TS", os.path.join(os.path.dirname(__file__), "..", "supabase", "functions", "_shared", "roster-data.ts"))
+if TS_OUT and os.environ.get("DC_SKIP_TS") != "1":
+    with open(TS_OUT, "w", encoding="utf-8") as f:
+        f.write(
+            "// Auto-generated alongside data.js by scripts/build_nflverse.py.\n"
+            "// Same gzip+base64 roster blob the client ships — not a separate or\n"
+            "// hidden data source, just also reachable from the Edge Function.\n"
+            '// Regenerating this file alone does NOT update production — redeploy with:\n'
+            "//   npx supabase functions deploy pick\n"
+            'export const ROSTER_DATA_B64 = "' + b64 + '";\n'
+        )
+    print(f"wrote {TS_OUT}")
+    print("⚠  Backend copy updated locally but NOT deployed — run:  npx supabase functions deploy pick")
+
 print("Done. Hard-refresh the site to load the new rosters.")
